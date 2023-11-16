@@ -46,36 +46,6 @@ public class TCPChecker {
         return CompletableFuture.supplyAsync(() -> checkPortOpen(inetSocketAddress), executor);
     }
 
-    private static void check(String gameType, String ip, int port) throws UnsupportedEncodingException {
-
-        ServerInfo serverInfo = QueriEd.serverQuery(gameType, ip, port);
-
-        if (serverInfo != null) {
-            System.out.println(
-                    "VALVE | " + ip + ":" + port + " " +
-                            serverInfo.getName() +
-                            "\nGame: " + serverInfo.getGame() +
-                            "\nMap: " + serverInfo.getMap() +
-                            "\nСписок игроков: (" + serverInfo.getPlayerCount() + " / " + serverInfo.getMaxPlayers() + "):");
-        }
-
-        ArrayList playerInfo = QueriEd.playerQuery(gameType, ip, port);
-
-        if (playerInfo != null && playerInfo.size() > 0) {
-            Iterator iter = playerInfo.iterator();
-            int count = 1;
-
-            while (iter.hasNext()) {
-                PlayerInfo pInfo = (PlayerInfo) iter.next();
-
-                System.out.println(
-                        count + ") " + pInfo.getName() + " [" + pInfo.getScore()
-                                + "/" + pInfo.getKills() + "/" + pInfo.getDeaths() + "]");
-                count++;
-            }
-        }
-    }
-
     public void doPortScan(List<String> addresses) {
         ExecutorService addressExecutor = Executors.newFixedThreadPool(ConfigUtil.AddressThreads);
 
@@ -134,10 +104,7 @@ public class TCPChecker {
                 }
 
                 CompletableFuture<Void> allPortFutures = CompletableFuture.allOf(portFutures.toArray(new CompletableFuture[0]));
-                try {
-                    allPortFutures.get();
-                } catch (InterruptedException | ExecutionException ignored) {
-                }
+                allPortFutures.join();
                 portExecutor.shutdown();
             }, addressExecutor);
 
@@ -145,10 +112,7 @@ public class TCPChecker {
         }
 
         CompletableFuture<Void> allAddressFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-        try {
-            allAddressFutures.get();
-        } catch (InterruptedException | ExecutionException ignored) {
-        }
+        allAddressFutures.join();
 
         addressExecutor.shutdown();
     }
@@ -169,6 +133,36 @@ public class TCPChecker {
         } catch (IOException ignored) {
         }
         return false;
+    }
+
+    private static void check(String gameType, String ip, int port) throws UnsupportedEncodingException {
+
+        ServerInfo serverInfo = QueriEd.serverQuery(gameType, ip, port);
+
+        if (serverInfo != null) {
+            System.out.println(
+                    "VALVE | " + ip + ":" + port + " " +
+                            serverInfo.getName() +
+                            "\nGame: " + serverInfo.getGame() +
+                            "\nMap: " + serverInfo.getMap() +
+                            "\nСписок игроков: (" + serverInfo.getPlayerCount() + " / " + serverInfo.getMaxPlayers() + "):");
+        }
+
+        ArrayList playerInfo = QueriEd.playerQuery(gameType, ip, port);
+
+        if (playerInfo != null && playerInfo.size() > 0) {
+            Iterator iter = playerInfo.iterator();
+            int count = 1;
+
+            while (iter.hasNext()) {
+                PlayerInfo pInfo = (PlayerInfo) iter.next();
+
+                System.out.println(
+                        count + ") " + pInfo.getName() + " [" + pInfo.getScore()
+                                + "/" + pInfo.getKills() + "/" + pInfo.getDeaths() + "]");
+                count++;
+            }
+        }
     }
 
     private String getHTTPTitleAndContent(InetSocketAddress address) {

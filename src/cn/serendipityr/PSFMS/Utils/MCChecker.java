@@ -3,11 +3,13 @@ package cn.serendipityr.PSFMS.Utils;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
-import java.io.*;
-import java.net.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 
 import static cn.serendipityr.PSFMS.Utils.ConfigUtil.LogPlayerList;
 import static cn.serendipityr.PSFMS.Utils.ConfigUtil.LogVersion;
@@ -52,14 +54,23 @@ public class MCChecker {
 
         StringBuilder motd = new StringBuilder();
         if (minecraftServerInfo.get("description") instanceof JSONObject) {
-            JSONArray motdArray = minecraftServerInfo.getJSONObject("description").getJSONArray("extra");
-            for (int i = 0; i < motdArray.size(); i++) {
-                JSONObject obj = motdArray.getJSONObject(i);
-                String color = obj.getString("color");
-                String text = obj.getString("text");
-                motd.append(getAnsiColorCode(color)).append(text).append("\u001B[0m");
+            JSONObject motdArray = minecraftServerInfo.getJSONObject("description");
+            JSONArray extraArray = motdArray.getJSONArray("extraArray");
+
+            if (extraArray != null) {
+                for (int i = 0; i < extraArray.size(); i++) {
+                    JSONObject obj = extraArray.getJSONObject(i);
+                    String color = obj.getString("color");
+                    String text = obj.getString("text");
+                    motd.append(getAnsiColorCode(color)).append(text).append("\u001B[0m");
+                }
+            } else if (motdArray.containsKey("text")) {
+                String text = motdArray.getString("text");
+                motd.append(text);
+            } else {
+                motd.append("no motd(");
             }
-        } else {
+        } else if (minecraftServerInfo.getString("description") != null) {
             motd = new StringBuilder(minecraftServerInfo.getString("description"));
         }
 
@@ -67,14 +78,23 @@ public class MCChecker {
         Integer onlinePlayers = minecraftServerInfo.getJSONObject("players").getInteger("online");
         Integer maxPlayers = minecraftServerInfo.getJSONObject("players").getInteger("max");
 
-        if (LogPlayerList && minecraftServerInfo.getJSONObject("players").containsKey("sample")) {
-            JSONArray playersArray = minecraftServerInfo.getJSONObject("players").getJSONArray("sample");
-            info.append("    Список игроков (").append(onlinePlayers).append(" / ").append(maxPlayers).append("):\n");
-            for (int i = 0; i < playersArray.size(); i++) {
-                JSONObject playerObj = playersArray.getJSONObject(i);
-                String playerName = playerObj.getString("name");
-                String playerId = playerObj.getString("id");
-                info.append("      - ").append(playerName).append(" (ID: ").append(playerId).append(")\n");
+        if (LogPlayerList) {
+            JSONObject players = minecraftServerInfo.getJSONObject("players");
+            if (players.containsKey("sample")) {
+                JSONArray playersArray = players.getJSONArray("sample");
+                info.append("    Список игроков (").append(onlinePlayers).append(" / ").append(maxPlayers).append("):\n");
+                for (int i = 0; i < playersArray.size(); i++) {
+                    JSONObject playerObj = playersArray.getJSONObject(i);
+                    String playerName = playerObj.getString("name");
+                    String playerId = playerObj.getString("id");
+                    info.append("      - ").append(playerName).append(" (ID: ").append(playerId).append(")\n");
+                }
+            }/* else if (players.containsKey("online") || players.containsKey("max")) {
+                info.append("Debug: ");
+                info.append(minecraftServerInfo.getJSONObject("players").toJSONString());
+            }*/
+            else {
+                System.out.println(players.toJSONString());
             }
         }
 
