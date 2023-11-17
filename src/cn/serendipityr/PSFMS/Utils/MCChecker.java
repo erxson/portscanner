@@ -1,5 +1,6 @@
 package cn.serendipityr.PSFMS.Utils;
 
+import cn.serendipityr.PSFMS.PortScannerForMinecraftServer;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
@@ -11,15 +12,16 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
-import static cn.serendipityr.PSFMS.Utils.ConfigUtil.LogPlayerList;
-import static cn.serendipityr.PSFMS.Utils.ConfigUtil.LogVersion;
+import static cn.serendipityr.PSFMS.PortScannerForMinecraftServer.*;
+import static cn.serendipityr.PSFMS.Utils.ConfigUtil.*;
 
 public class MCChecker {
 
     public static JSONObject checkMinecraftServer(InetSocketAddress inetSocketAddress) {
+        ++triedCPS;
         try (Socket socket = new Socket()) {
-            socket.connect(inetSocketAddress, ConfigUtil.ConnectTimeout);
-            socket.setSoTimeout(ConfigUtil.ReadTimeout);
+            socket.connect(inetSocketAddress, ConfigUtil.ConnectTimeout*2);
+            socket.setSoTimeout(ConfigUtil.ReadTimeout*2);
 
             DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
 
@@ -43,6 +45,9 @@ public class MCChecker {
             String result = readFromInputStream(dataInputStream);
             dataOutputStream.flush();
             socket.close();
+            ++curCPS;
+            ++totalConnections;
+            ++totalFoundMC;
             return JSONObject.parseObject(result);
         } catch (Exception e) {
             return null;
@@ -50,7 +55,28 @@ public class MCChecker {
     }
 
     public static String getMinecraftServerInfo(JSONObject minecraftServerInfo) {
+        if (minecraftServerInfo == null) return "";
+
         StringBuilder info = new StringBuilder();
+
+        if (!ModsSearch.isEmpty()) {
+            boolean found = false;
+
+            JSONObject mods = minecraftServerInfo.getJSONObject("modinfo");
+            if (mods != null) {
+                for (Object modInfo : mods.getJSONArray("modList")) {
+                    JSONObject mod = (JSONObject) modInfo;
+                    String modid = mod.getString("modid");
+                    for (String str : ModsSearch) {
+                        if (modid.contains(str)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!found) return "";
+        }
 
         StringBuilder motd = new StringBuilder();
         if (minecraftServerInfo.get("description") instanceof JSONObject) {
@@ -74,27 +100,29 @@ public class MCChecker {
             motd = new StringBuilder(minecraftServerInfo.getString("description"));
         }
 
+        if (!MotdSearch.isEmpty())
+            for (String str : MotdSearch)
+                if (!motd.toString().toLowerCase().contains(str.toLowerCase())) return "";
+
         info.append(" ").append(motd).append("\n");
-        Integer onlinePlayers = minecraftServerInfo.getJSONObject("players").getInteger("online");
-        Integer maxPlayers = minecraftServerInfo.getJSONObject("players").getInteger("max");
 
         if (LogPlayerList) {
             JSONObject players = minecraftServerInfo.getJSONObject("players");
-            if (players.containsKey("sample")) {
-                JSONArray playersArray = players.getJSONArray("sample");
-                info.append("    Список игроков (").append(onlinePlayers).append(" / ").append(maxPlayers).append("):\n");
-                for (int i = 0; i < playersArray.size(); i++) {
-                    JSONObject playerObj = playersArray.getJSONObject(i);
-                    String playerName = playerObj.getString("name");
-                    String playerId = playerObj.getString("id");
-                    info.append("      - ").append(playerName).append(" (ID: ").append(playerId).append(")\n");
+            if (players != null) {
+                Integer onlinePlayers = players.getInteger("online");
+                Integer maxPlayers = players.getInteger("max");
+                if (players.containsKey("sample")) {
+                    JSONArray playersArray = players.getJSONArray("sample");
+                    info.append("    Список игроков (").append(onlinePlayers).append(" / ").append(maxPlayers).append("):\n");
+                    for (int i = 0; i < playersArray.size(); i++) {
+                        JSONObject playerObj = playersArray.getJSONObject(i);
+                        String playerName = playerObj.getString("name");
+                        String playerId = playerObj.getString("id");
+                        info.append("      - ").append(playerName).append(" (ID: ").append(playerId).append(")\n");
+                    }
+                } else {
+                    System.out.println(players.toJSONString());
                 }
-            }/* else if (players.containsKey("online") || players.containsKey("max")) {
-                info.append("Debug: ");
-                info.append(minecraftServerInfo.getJSONObject("players").toJSONString());
-            }*/
-            else {
-                System.out.println(players.toJSONString());
             }
         }
 

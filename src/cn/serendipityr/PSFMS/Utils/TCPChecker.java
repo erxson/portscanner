@@ -1,5 +1,6 @@
 package cn.serendipityr.PSFMS.Utils;
 
+import cn.serendipityr.PSFMS.PortScannerForMinecraftServer;
 import com.alibaba.fastjson.JSONObject;
 import net.sourceforge.queried.PlayerInfo;
 import net.sourceforge.queried.QueriEd;
@@ -11,9 +12,12 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static cn.serendipityr.PSFMS.PortScannerForMinecraftServer.*;
 
 public class TCPChecker {
 
@@ -26,10 +30,14 @@ public class TCPChecker {
 
     public static Boolean checkPortOpen(InetSocketAddress inetSocketAddress) {
         boolean isOpen;
+        ++triedCPS;
         try (Socket socket = new Socket()) {
             socket.connect(inetSocketAddress, ConfigUtil.ConnectTimeout);
             socket.setSoTimeout(ConfigUtil.ReadTimeout);
             isOpen = true;
+            ++curCPS;
+            ++totalConnections;
+            ++totalFoundTCP;
         } catch (Exception e) {
             if (ConfigUtil.ShowFails) {
                 String msg = "Fails | " + inetSocketAddress.getHostString() + ":" + inetSocketAddress.getPort() + " | " + e;
@@ -70,13 +78,15 @@ public class TCPChecker {
                             }
                         }
                         if (isOpen) {
-                            JSONObject minecraftServerInfo = null;
+                            JSONObject minecraftServerData = null;
+                            String minecraftServerInfo = "";
                             boolean isHttpWebsite = false;
 
                             try {
                                 if (ConfigUtil.LogMinecraft) {
                                     TimeUnit.MILLISECONDS.sleep(ConfigUtil.ScanDelay);
-                                    minecraftServerInfo = MCChecker.checkMinecraftServer(new InetSocketAddress(address, port));
+                                    minecraftServerData = MCChecker.checkMinecraftServer(new InetSocketAddress(address, port));
+                                    minecraftServerInfo = MCChecker.getMinecraftServerInfo(minecraftServerData);
                                 }
                                 if (ConfigUtil.LogHTTP) {
                                     TimeUnit.MILLISECONDS.sleep(ConfigUtil.ScanDelay);
@@ -86,9 +96,9 @@ public class TCPChecker {
                             }
 
                             String logMessage = "";
-                            if (minecraftServerInfo != null && ConfigUtil.LogMinecraft) {
-                                logMessage = "MC | " + address + ":" + port + " | " + MCChecker.getMinecraftServerInfo(minecraftServerInfo);
-                            } else if (isHttpWebsite && ConfigUtil.LogHTTP) {
+                            if (minecraftServerData != null && ConfigUtil.LogMinecraft && !minecraftServerInfo.isEmpty()) {
+                                logMessage = "MC | " + address + ":" + port + " | " + minecraftServerInfo;
+                            } else if (isHttpWebsite) {
                                 String body = getHTTPTitleAndContent(new InetSocketAddress(address, port));
                                 logMessage = "HTTP | http" + (port == 443 || port == 8443 ? "s" : "") + "://" + address + ":" + port + body;
                             } else if (ConfigUtil.LogTCP) {
@@ -118,6 +128,7 @@ public class TCPChecker {
     }
 
     private boolean isHTTPWebsite(InetSocketAddress address) {
+        ++triedCPS;
         try (Socket socket = new Socket()) {
             socket.connect(address, ConfigUtil.ConnectTimeout);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -130,13 +141,15 @@ public class TCPChecker {
                 LogUtil.println("Body: " + line);
                 return true;
             }
+            ++curCPS;
+            ++totalConnections;
         } catch (IOException ignored) {
         }
         return false;
     }
 
     private static void check(String gameType, String ip, int port) throws UnsupportedEncodingException {
-
+        ++triedCPS;
         ServerInfo serverInfo = QueriEd.serverQuery(gameType, ip, port);
 
         if (serverInfo != null) {
@@ -146,6 +159,8 @@ public class TCPChecker {
                             "\nGame: " + serverInfo.getGame() +
                             "\nMap: " + serverInfo.getMap() +
                             "\nСписок игроков: (" + serverInfo.getPlayerCount() + " / " + serverInfo.getMaxPlayers() + "):");
+            ++curCPS;
+            ++totalConnections;
         }
 
         ArrayList playerInfo = QueriEd.playerQuery(gameType, ip, port);
@@ -166,12 +181,15 @@ public class TCPChecker {
     }
 
     private String getHTTPTitleAndContent(InetSocketAddress address) {
+        ++triedCPS;
         try (Socket socket = new Socket()) {
             socket.connect(address, ConfigUtil.ConnectTimeout);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             out.println("GET / HTTP/1.1");
             out.println("Host: " + address.getHostName());
             out.println();
+            ++curCPS;
+            ++totalConnections;
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
             String headerLine;

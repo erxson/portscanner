@@ -32,6 +32,7 @@ public class ConfigUtil {
     public static Integer MinPort;
     public static Integer MaxPort;
     public static Boolean ShowFails;
+    public static Boolean ShowStats;
 
     public static Boolean LogCurrentIP;
     public static Boolean LogTCP;
@@ -42,6 +43,8 @@ public class ConfigUtil {
     public static Boolean LogVersion;
 
     public static Integer VersionProtocol;
+    public static List<String> MotdSearch;
+    public static List<String> ModsSearch;
     public static List<String> TitleSearch;
     public static List<String> TitleExclude;
 
@@ -56,6 +59,8 @@ public class ConfigUtil {
             MinPort = config.getInt("MinPort");
             MaxPort = config.getInt("MaxPort");
             ShowFails = config.getBoolean("ShowFails");
+            ShowStats = config.getBoolean("ShowStats");
+
 
             LogCurrentIP = config.getBoolean("LogCurrentIP");
             LogTCP = config.getBoolean("LogTCP");
@@ -65,9 +70,11 @@ public class ConfigUtil {
             LogPlayerList = config.getBoolean("LogPlayerList");
             LogVersion = config.getBoolean("LogVersion");
 
-            VersionProtocol = config.getInt("VersionProtocol");
+            MotdSearch = config.getStringList("MotdSearch");
+            ModsSearch = config.getStringList("ModsSearch");
             TitleSearch = config.getStringList("TitleSearch");
             TitleExclude = config.getStringList("TitleExclude");
+            VersionProtocol = config.getInt("VersionProtocol");
 
             try {
                 ScanAddress = toIPAddress(HostAddress);
@@ -191,7 +198,7 @@ public class ConfigUtil {
             isr.close();
         } catch (Exception e) {
             LogUtil.doLog(1, "Произошла ошибка при преобразовании кодировки файла! Подробности: " + e, null);
-            PortScannerForMinecraftServer.exit();
+            System.exit(0);
         }
     }
 

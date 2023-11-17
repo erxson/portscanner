@@ -4,26 +4,35 @@ import cc.summermc.bukkitYaml.file.YamlConfiguration;
 import cn.serendipityr.PSFMS.Utils.ConfigUtil;
 import cn.serendipityr.PSFMS.Utils.TCPChecker;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.time.DateTimeException;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
+import static cn.serendipityr.PSFMS.Utils.ConfigUtil.*;
+
 public class PortScannerForMinecraftServer {
+    public static final String statsFormat = "[ Tried CPS %s | Average CPS %s |  Current CPS %s ] ( MC %s / TCP %s ) { Time Active: %s | ETA: %s }";
+
     public static File configFile;
     public static YamlConfiguration config;
 
-    public static void main(String[] args) {
-        start();
-        System.out.println("Конец.");
-        Scanner scanner = new Scanner(System.in);
-        scanner.nextLine();
-    }
+    public static volatile int curCPS = 0;
+    public static volatile int triedCPS = 1;
+    public static volatile int avgCPS = 0;
+    public static volatile int totalConnections = 0;
+    public static volatile double totalSeconds = 1;
+    public static volatile int totalFoundTCP = 0;
+    public static volatile int totalFoundMC = 0;
 
-    public static void start() {
+    public static volatile boolean scanning = true;
+    public volatile static List<String> allIPs = new ArrayList<>();
+
+
+    public static void main(String[] args) {
         configFile = new File("config.yml");
 
         if (!configFile.exists()) {
@@ -40,13 +49,49 @@ public class PortScannerForMinecraftServer {
         new ConfigUtil().loadConfig();
 
         List<String> ipPatterns = config.getStringList("ScanHostAddress");
-
-        List<String> allIPs = new ArrayList<>();
         for (String ipPattern : ipPatterns) {
             List<String> singleIPs = generateMassiveIPList(ipPattern);
             allIPs.addAll(singleIPs);
         }
-        new TCPChecker().doPortScan(allIPs);
+
+        if (ConfigUtil.ShowStats) {
+            startCounter();
+        }
+
+        TCPChecker checker = new TCPChecker();
+        checker.doPortScan(allIPs);
+
+        scanning = false;
+        System.out.println("Scanning finished. Press ENTER");
+        Scanner scanner = new Scanner(System.in);
+        scanner.nextLine();
+        System.exit(0);
+    }
+
+    private static void startCounter() {
+        Thread Counter = new Thread(() -> {
+            int delay = ConnectTimeout * 2;
+            while (scanning) {
+                try {
+                    Thread.sleep(delay);
+
+                    totalSeconds += (double) delay / 1000;
+                    avgCPS = (int) (totalConnections / totalSeconds);
+
+                    String timeActive = LocalTime.ofSecondOfDay((int) totalSeconds).toString();
+                    String timeLeft = LocalTime.ofSecondOfDay((long) allIPs.size() * (MaxPort - MinPort) / triedCPS).toString();
+
+                    String out = String.format(statsFormat, triedCPS, avgCPS, curCPS, totalFoundMC, totalFoundTCP, timeActive, timeLeft);
+
+                    System.out.println(out);
+
+                    PortScannerForMinecraftServer.curCPS = 0;
+                    triedCPS = 1;
+                } catch (InterruptedException | DateTimeException ignored) {}
+            }
+        });
+        Counter.setPriority(1);
+        Counter.start();
     }
 
     private static List<String> generateMassiveIPList(String pattern) {
@@ -82,10 +127,6 @@ public class PortScannerForMinecraftServer {
         }
 
         return ipList;
-    }
-
-    public static void exit() {
-        System.exit(0);
     }
 
     public static void copyResourceToFile(String resourceName, File destinationFile) throws IOException {
