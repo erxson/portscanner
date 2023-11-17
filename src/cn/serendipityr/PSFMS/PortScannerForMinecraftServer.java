@@ -70,16 +70,17 @@ public class PortScannerForMinecraftServer {
 
     private static void startCounter() {
         Thread Counter = new Thread(() -> {
-            int delay = ConnectTimeout * 2;
             while (scanning) {
                 try {
-                    Thread.sleep(delay);
+                    Thread.sleep(ConnectTimeout);
 
-                    totalSeconds += (double) delay / 1000;
+                    totalSeconds += (double) ConnectTimeout / 1000;
                     avgCPS = (int) (totalConnections / totalSeconds);
 
                     String timeActive = LocalTime.ofSecondOfDay((int) totalSeconds).toString();
-                    String timeLeft = LocalTime.ofSecondOfDay((long) allIPs.size() * (MaxPort - MinPort) / triedCPS).toString();
+                    long asd = (long) ((long) allIPs.size() * (MaxPort - MinPort + 1) / triedCPS - totalSeconds);
+                    if (asd > 86399) asd = 0;
+                    String timeLeft = LocalTime.ofSecondOfDay(asd).toString();
 
                     String out = String.format(statsFormat, triedCPS, avgCPS, curCPS, totalFoundMC, totalFoundTCP, timeActive, timeLeft);
 
@@ -87,7 +88,9 @@ public class PortScannerForMinecraftServer {
 
                     PortScannerForMinecraftServer.curCPS = 0;
                     triedCPS = 1;
-                } catch (InterruptedException | DateTimeException ignored) {}
+                } catch (InterruptedException | DateTimeException e) {
+                    e.printStackTrace();
+                }
             }
         });
         Counter.setPriority(1);
