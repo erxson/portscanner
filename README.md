@@ -6,19 +6,20 @@ fork of chinese minecraft/http/tcp port scanner
 
 # config
 ```yml
-MinPort: 20000
-MaxPort: 30000
 ScanHostAddress:
  - 135.181.126.129 # f7.joinserver.xyz
+MinPort: 21
+MaxPort: 65535
 ScanDelay: 1
 AddressThreads: 1
-ScanThreads: 100
+ScanThreads: 64
 ConnectTimeout: 2000
 ReadTimeout: 2000
-OutputFile: "pizda/%time%.txt"
+OutputFile: "output/%time%.txt"
 ShowFails: false
+ShowStats: true
 
-LogCurrentIP: true
+LogCurrentIP: false
 LogTCP: false
 LogHTTP: false
 
@@ -27,7 +28,9 @@ LogMinecraft: true
 LogPlayerList: true
 LogVersion: true
 
-VersionProtocol: 0
+MotdSearch: []
+ModsSearch: []
 TitleSearch: []
 TitleExclude: []
+VersionProtocol: 0
 ```
