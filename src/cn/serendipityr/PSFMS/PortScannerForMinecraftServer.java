@@ -89,7 +89,7 @@ public class PortScannerForMinecraftServer {
                     PortScannerForMinecraftServer.curCPS = 0;
                     triedCPS = 1;
                 } catch (InterruptedException | DateTimeException e) {
-                    e.printStackTrace();
+//                    e.printStackTrace();
                 }
             }
         });

@@ -1,6 +1,5 @@
 package cn.serendipityr.PSFMS.Utils;
 
-import cn.serendipityr.PSFMS.PortScannerForMinecraftServer;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
@@ -17,7 +16,7 @@ import static cn.serendipityr.PSFMS.Utils.ConfigUtil.*;
 
 public class MCChecker {
 
-    public static JSONObject checkMinecraftServer(InetSocketAddress inetSocketAddress) {
+    public static String checkMinecraftServer(InetSocketAddress inetSocketAddress) {
         ++triedCPS;
         try (Socket socket = new Socket()) {
             socket.connect(inetSocketAddress, ConfigUtil.ConnectTimeout*2);
@@ -47,8 +46,14 @@ public class MCChecker {
             socket.close();
             ++curCPS;
             ++totalConnections;
+
+            String info = getMinecraftServerInfo(JSONObject.parseObject(result));
+            if (info.equals("")) {
+                return null;
+            }
+
             ++totalFoundMC;
-            return JSONObject.parseObject(result);
+            return info;
         } catch (Exception e) {
             return null;
         }

@@ -78,15 +78,13 @@ public class TCPChecker {
                             }
                         }
                         if (isOpen) {
-                            JSONObject minecraftServerData = null;
-                            String minecraftServerInfo = "";
+                            String minecraftServerData = null;
                             boolean isHttpWebsite = false;
 
                             try {
                                 if (ConfigUtil.LogMinecraft) {
                                     TimeUnit.MILLISECONDS.sleep(ConfigUtil.ScanDelay);
                                     minecraftServerData = MCChecker.checkMinecraftServer(new InetSocketAddress(address, port));
-                                    minecraftServerInfo = MCChecker.getMinecraftServerInfo(minecraftServerData);
                                 }
                                 if (ConfigUtil.LogHTTP) {
                                     TimeUnit.MILLISECONDS.sleep(ConfigUtil.ScanDelay);
@@ -96,8 +94,8 @@ public class TCPChecker {
                             }
 
                             String logMessage = "";
-                            if (minecraftServerData != null && ConfigUtil.LogMinecraft && !minecraftServerInfo.isEmpty()) {
-                                logMessage = "MC | " + address + ":" + port + " | " + minecraftServerInfo;
+                            if (minecraftServerData != null && ConfigUtil.LogMinecraft) {
+                                logMessage = "MC | " + address + ":" + port + " | " + minecraftServerData;
                             } else if (isHttpWebsite) {
                                 String body = getHTTPTitleAndContent(new InetSocketAddress(address, port));
                                 logMessage = "HTTP | http" + (port == 443 || port == 8443 ? "s" : "") + "://" + address + ":" + port + body;
