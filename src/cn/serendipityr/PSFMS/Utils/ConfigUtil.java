@@ -45,6 +45,7 @@ public class ConfigUtil {
     public static Integer VersionProtocol;
     public static List<String> MotdSearch;
     public static List<String> ModsSearch;
+    public static List<String> VersionSearch;
     public static List<String> TitleSearch;
     public static List<String> TitleExclude;
 
@@ -72,6 +73,7 @@ public class ConfigUtil {
 
             MotdSearch = config.getStringList("MotdSearch");
             ModsSearch = config.getStringList("ModsSearch");
+            VersionSearch = config.getStringList("VersionSearch");
             TitleSearch = config.getStringList("TitleSearch");
             TitleExclude = config.getStringList("TitleExclude");
             VersionProtocol = config.getInt("VersionProtocol");

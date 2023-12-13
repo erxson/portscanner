@@ -29,10 +29,12 @@ public class MCChecker {
             DataOutputStream handshake = new DataOutputStream(b);
 
             handshake.writeByte(0x00);
-            if (ConfigUtil.VersionProtocol != 0) writeVarInt(handshake, ConfigUtil.VersionProtocol);
-            writeVarInt(handshake, 4);
-            writeVarInt(handshake, ConfigUtil.ScanAddress.length());
-            handshake.writeBytes(ConfigUtil.ScanAddress);
+            if (ConfigUtil.VersionProtocol != 0)
+                writeVarInt(handshake, ConfigUtil.VersionProtocol);
+            else
+                writeVarInt(handshake, 4);
+            writeVarInt(handshake, inetSocketAddress.getAddress().getHostAddress().length());
+            handshake.writeBytes(inetSocketAddress.getAddress().getHostAddress());
             handshake.writeShort(inetSocketAddress.getPort());
             writeVarInt(handshake, 1);
 
@@ -105,10 +107,6 @@ public class MCChecker {
             motd = new StringBuilder(minecraftServerInfo.getString("description"));
         }
 
-        if (!MotdSearch.isEmpty())
-            for (String str : MotdSearch)
-                if (!motd.toString().toLowerCase().contains(str.toLowerCase())) return "";
-
         info.append(" ").append(motd).append("\n");
 
         if (LogPlayerList) {
@@ -134,6 +132,34 @@ public class MCChecker {
         String version = minecraftServerInfo.getJSONObject("version").getString("name");
         Integer protocolVersion = minecraftServerInfo.getJSONObject("version").getInteger("protocol");
         if (LogVersion) info.append("    Версия: ").append(version).append(" (").append(protocolVersion).append(")");
+
+        if ((!MotdSearch.isEmpty() && !motd.isEmpty()) || (!VersionSearch.isEmpty() && !version.isEmpty())) {
+            if (!MotdSearch.isEmpty() && !motd.isEmpty()) {
+                for (String str : MotdSearch) {
+                    if (!motd.toString().toLowerCase().contains(str.toLowerCase())) {
+                        return "";
+                    }
+                }
+            }
+
+            if (!VersionSearch.isEmpty() && !version.isEmpty()) {
+                for (String str : VersionSearch) {
+                    if (!version.toLowerCase().contains(str.toLowerCase())) {
+                        return "";
+                    }
+                }
+            }
+
+            return "";
+        }
+
+        /*if (!MotdSearch.isEmpty() && !motd.isEmpty())
+            for (String str : MotdSearch)
+                if (!motd.toString().toLowerCase().contains(str.toLowerCase())) return "";
+
+        if (!VersionSearch.isEmpty() && !version.isEmpty())
+            for (String str : VersionSearch)
+                if (!version.toLowerCase().contains(str.toLowerCase())) return "";*/
 
         return info.toString();
     }
